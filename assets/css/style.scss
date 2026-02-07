@@ -3,12 +3,129 @@
 
 @import "minima";
 
+/* ===== CSS Custom Properties for theming ===== */
+:root {
+  --bg-primary: #fdfdfd;
+  --bg-secondary: #f8f9fa;
+  --bg-code: #f0f0f0;
+  --text-primary: #111;
+  --text-secondary: #666;
+  --text-meta: #828282;
+  --text-link: #333;
+  --border-color: #e8e8e8;
+  --border-table: #ddd;
+  --accent: #4a9eff;
+  --blockquote-bg: #f8f9fa;
+  --code-bg: #f5f5f5;
+  --highlight-bg: #272822;
+  --highlight-text: #f8f8f2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-code: #0f3460;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --text-meta: #8a8a8a;
+    --text-link: #c0c0c0;
+    --border-color: #2a2a4a;
+    --border-table: #2a2a4a;
+    --accent: #5dade2;
+    --blockquote-bg: #16213e;
+    --code-bg: #0f3460;
+    --highlight-bg: #1a1a2e;
+    --highlight-text: #e0e0e0;
+  }
+
+  /* Override minima's hardcoded colors */
+  body {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .site-header {
+    background-color: var(--bg-primary);
+    border-top-color: var(--accent);
+    border-bottom-color: var(--border-color);
+  }
+
+  .site-title, .site-title:visited {
+    color: var(--text-primary) !important;
+  }
+
+  .site-nav .page-link {
+    color: var(--text-primary);
+  }
+
+  .page-link:hover {
+    color: var(--accent);
+  }
+
+  .post-title, .post-title a {
+    color: var(--text-primary) !important;
+  }
+
+  .post-link {
+    color: var(--text-primary) !important;
+  }
+
+  .post-link:hover {
+    color: var(--accent) !important;
+  }
+
+  a {
+    color: var(--accent);
+  }
+
+  a:visited {
+    color: #9b59b6;
+  }
+
+  a:hover {
+    color: #85c1e9;
+  }
+
+  .site-footer {
+    border-top-color: var(--border-color);
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+  }
+
+  .footer-col {
+    color: var(--text-secondary);
+  }
+
+  hr {
+    border-color: var(--border-color);
+  }
+
+  /* Syntax highlighting in dark mode */
+  .highlight {
+    background: var(--highlight-bg) !important;
+  }
+
+  .highlight pre,
+  pre.highlight {
+    background: var(--highlight-bg) !important;
+    color: var(--highlight-text);
+  }
+
+  /* MathJax dark mode */
+  .MathJax, .MathJax_Display {
+    color: var(--text-primary) !important;
+  }
+}
+
+/* ===== Layout ===== */
+
 /* Wide content area for long-form reading */
 .wrapper {
   max-width: 820px;
 }
 
-/* Post typography */
+/* ===== Post Typography ===== */
 .post-content {
   font-size: 1.05rem;
   line-height: 1.75;
@@ -17,7 +134,7 @@
     margin-top: 2.5em;
     margin-bottom: 0.8em;
     padding-bottom: 0.3em;
-    border-bottom: 1px solid #e8e8e8;
+    border-bottom: 1px solid var(--border-color);
   }
 
   h3 {
@@ -45,7 +162,7 @@
   /* Inline code */
   p code,
   li code {
-    background: #f0f0f0;
+    background: var(--bg-code);
     padding: 0.15em 0.4em;
     border-radius: 3px;
   }
@@ -62,18 +179,19 @@
     display: block;
     text-align: center;
     font-size: 0.9em;
-    color: #666;
+    color: var(--text-secondary);
     margin-top: -1em;
     margin-bottom: 1.5em;
   }
 
   /* Blockquotes for key insights */
   blockquote {
-    border-left: 4px solid #4a9eff;
-    background: #f8f9fa;
+    border-left: 4px solid var(--accent);
+    background: var(--blockquote-bg);
     padding: 0.8em 1.2em;
     margin: 1.5em 0;
     font-style: normal;
+    color: var(--text-primary);
 
     p:last-child {
       margin-bottom: 0;
@@ -88,12 +206,12 @@
 
     th, td {
       padding: 0.6em 1em;
-      border: 1px solid #ddd;
+      border: 1px solid var(--border-table);
       text-align: left;
     }
 
     th {
-      background: #f8f9fa;
+      background: var(--bg-secondary);
       font-weight: 600;
     }
   }
@@ -105,10 +223,10 @@
   }
 }
 
-/* Table of contents */
+/* ===== Table of Contents ===== */
 .toc {
-  background: #f8f9fa;
-  border: 1px solid #e8e8e8;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 1em 1.5em;
   margin-bottom: 2em;
@@ -129,23 +247,22 @@
 
   a {
     text-decoration: none;
-    color: #333;
+    color: var(--text-link);
 
     &:hover {
-      color: #4a9eff;
+      color: var(--accent);
     }
   }
 }
 
-/* Post categories */
+/* ===== Post Metadata ===== */
 .post-category {
   display: inline-block;
   font-size: 0.85em;
-  color: #4a9eff;
+  color: var(--accent);
 }
 
-/* Reading time */
 .post-meta {
-  color: #828282;
+  color: var(--text-meta);
   font-size: 0.9em;
 }
