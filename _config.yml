@@ -1,0 +1,50 @@
+title: StudyBuddy
+description: >-
+  Deep technical explorations of ML, AI, and LLM topics.
+  Study notes turned into long-form articles with code, math, and diagrams.
+baseurl: "/studybuddy"
+url: "https://tensorcopy.github.io"
+
+theme: minima
+
+permalink: /:year/:month/:day/:title/
+
+# Build settings
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  math_engine: null # We use MathJax instead
+
+highlighter: rouge
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Collections
+collections:
+  drafts:
+    output: false
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+      mathjax: true
+      toc: true
+
+# Exclude from build
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .claude
+  - CLAUDE.md
+  - README.md
