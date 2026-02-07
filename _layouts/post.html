@@ -31,8 +31,9 @@ layout: default
         {% assign headers = content | split: '<h2' %}
         {% for header in headers %}
           {% if forloop.first %}{% continue %}{% endif %}
-          {% assign header_id = header | split: 'id="' | last | split: '"' | first %}
-          {% assign header_text = header | split: '>' | last | split: '</h2>' | first %}
+          {% assign id_parts = header | split: 'id="' %}
+          {% assign header_id = id_parts[1] | split: '"' | first %}
+          {% assign header_text = header | split: '</h2>' | first | split: '>' | last %}
           <li><a href="#{{ header_id }}">{{ header_text }}</a></li>
         {% endfor %}
       </ul>
