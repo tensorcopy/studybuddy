@@ -7,14 +7,14 @@ A technical blog hosted on GitHub Pages at `https://tensorcopy.github.io/studybu
 ## Directory Structure
 
 ```
-_posts/          # Published posts (YYYY-MM-DD-title.md)
-_drafts/         # Draft posts (not published)
-_drafts/research/  # Research briefs from /research command
-_layouts/        # Custom Jekyll layouts
-_includes/       # Reusable HTML components
-assets/css/      # Custom styles
-assets/images/   # Post images and diagrams
-.claude/commands/  # Custom slash commands
+_posts/              # Published posts (YYYY-MM-DD-title.md)
+_drafts/             # Draft posts (not published)
+_drafts/research/    # Research briefs from /research skill
+_layouts/            # Custom Jekyll layouts
+_includes/           # Reusable HTML components
+assets/css/          # Custom styles
+assets/images/       # Post images and diagrams
+.claude/skills/      # Agent skills (research, write-post, validate-post)
 ```
 
 ## Blog Style Guide
@@ -100,11 +100,33 @@ Before publishing a post, verify:
 - [ ] Reading time is reasonable (check word count)
 - [ ] Conclusion includes practical takeaways
 
-## Custom Commands
+## Skills (Slash Commands)
 
-- `/research <topic>` — Generate a research brief for a topic
-- `/write-post <topic-or-file>` — Write a full blog post from a topic or research brief
-- `/validate-post <file>` — Review a draft post for quality and correctness
+These skills use parallel sub-agents for speed and chain together automatically:
+
+- **`/research <topic>`** — Spawns 4 parallel agents (foundations, modern advances, implementations, industry practice) to research a topic. Saves a structured brief to `_drafts/research/`.
+- **`/write-post <topic-or-file>`** — Full pipeline: auto-invokes `/research` if no brief exists, spawns parallel agents to write sections, assembles the post, then auto-invokes `/validate-post`. Saves draft to `_drafts/`.
+- **`/validate-post <file>`** — Spawns 3 parallel agents (code verification, technical review, style review). Auto-fixes critical issues. Returns a scored review.
+
+### Pipeline Flow
+
+```
+/research <topic>  -->  _drafts/research/YYYY-MM-DD-topic.md
+                              |
+/write-post <topic> --------->|  (auto-researches if needed)
+                              v
+                        _drafts/YYYY-MM-DD-topic.md
+                              |
+/validate-post <file> ------->|  (auto-validates after writing)
+                              v
+                        Review + auto-fixes
+```
+
+## Python Tooling
+
+- Use `uv run python <script>` to execute Python code examples
+- Dependencies are managed in `pyproject.toml`
+- Run `uv sync` to install/update dependencies
 
 ## Build & Deploy
 

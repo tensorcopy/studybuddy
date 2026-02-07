@@ -6,3 +6,5 @@ vendor/
 .bundle/
 *.gem
 .DS_Store
+.venv/
+uv.lock
