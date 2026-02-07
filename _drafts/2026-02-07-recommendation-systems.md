@@ -2,10 +2,10 @@
 title: "The Complete Guide to Recommendation Systems: From Collaborative Filtering to LLM-Enhanced Pipelines"
 date: 2026-02-07
 categories: [machine-learning, recommendation-systems]
-tags: [collaborative-filtering, matrix-factorization, deep-learning, transformers, graph-neural-networks, llm, two-tower, recommendation-systems]
+tags: [collaborative-filtering, matrix-factorization, deep-learning, transformers, graph-neural-networks, llm, two-tower, recommendation-systems, hstu, wukong, generative-recommendation]
 mathjax: true
 toc: true
-description: "A deep dive into recommendation systems covering 30+ years of evolution — from collaborative filtering and matrix factorization through neural models, transformers, GNNs, and LLM-enhanced industrial pipelines, with runnable code examples and practical guidance."
+description: "A deep dive into recommendation systems covering 30+ years of evolution — from collaborative filtering and matrix factorization through neural models, GNNs, and the generative recommendation era (Wukong, HSTU, OneTrans, OneRec, PLUM), with runnable code examples and practical guidance."
 ---
 
 ## Introduction
@@ -465,13 +465,77 @@ This is not an afterthought. At companies like Netflix and YouTube, the re-ranki
 
 The seminal paper that crystallized this pipeline thinking for the deep learning era was Covington et al.'s 2016 work, "Deep Neural Networks for YouTube Recommendations." Their two-stage system (candidate generation with a deep neural network, ranking with a separate deep model) became the template that most large-scale systems still follow today, with the re-ranking stage growing more sophisticated over time.
 
-With the industrial pipeline architecture established, we can now turn to the most recent disruption shaking up every stage of this funnel: large language models.
+With the industrial pipeline architecture established, we can examine the most significant recent development: the emergence of architectures that exhibit scaling laws comparable to LLMs — and in some cases, collapse the multi-stage pipeline into a single model.
+
+## The Generative Recommendation Era
+
+Between 2024 and early 2026, a paradigm shift swept through industrial recommendation systems. The core insight: recommendation can be reformulated from a discriminative problem (score each user-item pair) to a **generative** one (given a user's history, generate the next items they will engage with). This shift, combined with the discovery that recommendation models can exhibit **scaling laws** similar to LLMs, has led to architectures that are fundamentally more capable than anything that came before.
+
+### Wukong: Scaling Laws Arrive in RecSys
+
+**Wukong** (Zhang et al., Meta, ICML 2024) asked a question that had not been rigorously tested before: do recommendation models exhibit scaling laws? In NLP, we know that increasing model size predictably improves performance — the insight that launched the LLM era. Wukong demonstrated that the same principle holds for recommendation, *if* you use the right architecture.
+
+The architecture is built on **stacked factorization machines** — a network of alternating Factorization Machine Blocks (FMB) and Linear Compression Blocks (LCB). Each FMB captures pairwise feature interactions and processes them through an MLP. Each LCB linearly compresses the representation. The critical property is that stacking these layers causes the interaction order to grow **exponentially**: layer 1 captures 2nd-order interactions, layer 2 captures up to 4th-order, layer $L$ captures up to $2^L$-th order. This "binary exponentiation" means Wukong models extremely high-order feature interactions with relatively few layers — something that Deep & Cross Network (which grows interaction order *linearly* with depth) cannot match.
+
+The key result: Wukong exhibits a **smooth, monotonic quality improvement across two orders of magnitude** in model complexity, extending beyond 100 GFLOP/example. Prior architectures plateau or degrade well before this point. This is not a marginal finding — it means that for the first time, recommendation teams can predictably trade compute for quality, just as NLP teams do with LLMs.
+
+> The discovery of scaling laws in recommendation models is arguably as consequential for the field as the discovery of scaling laws was for NLP. It means we are no longer architecture-hunting — we are scaling, and the returns are predictable.
+
+Wukong operates as a **ranking model**, replacing the feature interaction component (DCN, DeepFM) in the traditional DLRM stack. Its architecture was subsequently adopted in Meta's **GEM** (Generative Ads Model), a production foundation model that powers ads recommendation across Facebook and Instagram, achieving +5% ad conversions on Instagram and +3% on Facebook Feed.
+
+### HSTU: Trillion-Parameter Generative Recommenders
+
+If Wukong brought scaling laws to recommendation ranking, **HSTU** (Hierarchical Sequential Transduction Unit, Zhai et al., Meta, ICML 2024) brought them to the entire recommendation pipeline. HSTU reformulates recommendation as **sequential transduction**: given a user's history of actions, generate the next actions. This is the "Generative Recommender" (GR) paradigm — essentially treating recommendation as a language modeling problem over user behavior sequences.
+
+HSTU is a modified Transformer, but the modifications are not cosmetic. Recommendation data differs from text in ways that demand architectural changes:
+
+- **Intensity matters**: A user who interacted with 100 cooking videos has stronger signal than one who interacted with 5, even if the relative distribution is similar. Standard softmax attention normalizes away this intensity. HSTU replaces softmax with **pointwise SiLU activation**, preserving absolute magnitude information.
+- **Heterogeneous tokens**: Each "token" in a user's history is a (item, action_type, timestamp) tuple, not just an item ID. HSTU processes these with relative positional and temporal attention biases.
+- **Gated feature interaction**: Each HSTU layer applies a Hadamard product gating mechanism ($U(X) \odot \text{Attention}(X)$) that serves as the feature interaction component — replacing the separate feature interaction networks in traditional DLRMs.
+
+The inference bottleneck is solved by **M-FALCON** (Microbatched-Fast Attention Leveraging Cacheable Operations): the user's history is processed once and its K/V representations are cached, while candidates are scored in micro-batches. The result: a 285x more complex model can be served at 3x higher QPS than a traditional DLRM.
+
+The production results are striking: a **1.5 trillion parameter** HSTU model deployed across multiple Meta surfaces achieves a **12.4% metric improvement** in online A/B tests, with up to 65.8% improvement in NDCG over baselines.
+
+### OneTrans: Unified Tokenization at ByteDance
+
+While HSTU focused on sequential transduction, **OneTrans** (Zhang et al., ByteDance, 2025) tackled a different unification problem. Traditional industrial recommenders separate user behavior sequence modeling (what the user did) from feature interaction (combining user, item, and context features). These are typically handled by different sub-networks — DIN/DIEN for sequences, DCN/DeepFM for features — limiting information flow between them.
+
+OneTrans introduces a **unified tokenizer** that converts all input attributes into a single token sequence:
+- **S-tokens** (Sequential): Represent user behavior history items, sharing parameters since they come from the same semantic space
+- **NS-tokens** (Non-Sequential): Represent non-sequential features (user demographics, item attributes, context), each with its own token-specific parameters
+
+These are processed by a causal Transformer with **mixed parameterization** — shared Q/K/V weights for S-tokens but token-specific weights for each NS-token — and a **pyramid architecture** that progressively truncates older S-tokens at each layer, distilling sequential information into the NS-token representations through cross-attention.
+
+The efficiency innovation is **cross-request KV caching**: all candidates in a request share the same user behavior sequence, so S-token K/V pairs are computed once and reused across candidates (~30% runtime reduction, ~50% memory reduction). Online A/B tests at ByteDance showed +4.35% orders per user in Feeds and +5.68% GMV per user in Mall scenarios.
+
+### OneRec: The End of the Pipeline?
+
+Perhaps the most provocative result comes from **OneRec** (Wang et al., Kuaishou, 2025) — the first production system where a single generative model demonstrably **outperforms an entire cascaded pipeline** (retrieval + pre-ranking + ranking + re-ranking).
+
+OneRec uses an encoder-decoder architecture with **sparse Mixture-of-Experts** layers (only 13% of parameters activated during inference) and a novel **session-wise generation** approach: instead of predicting one item at a time, it generates an entire session of recommendations at once, considering the relative content and ordering within the session. It then applies **Direct Preference Optimization (DPO)** — borrowed directly from the LLM alignment playbook — to align generated recommendations with user preferences.
+
+The +1.6% watch-time increase on Kuaishou's main video feed may sound modest, but at Kuaishou's scale (300+ million daily active users), this represents enormous value. More importantly, it validates the thesis that the multi-stage pipeline — which we have treated as an engineering necessity — may ultimately be an artifact of insufficient model capacity.
+
+> OneRec's result challenges a fundamental assumption of the field: that the multi-stage pipeline is architecturally necessary. If a single generative model can outperform a carefully optimized cascade of specialized models, the engineering complexity of maintaining separate retrieval, ranking, and re-ranking systems may become a liability rather than an advantage.
+
+I should note that this remains early evidence. OneRec operates on a single product surface, and whether the approach generalizes across all recommendation domains remains an open question. But the directional signal is clear.
+
+### The Paradigm Shift in Summary
+
+| Dimension | Traditional DLRM | Generative Recommender |
+|-----------|------------------|----------------------|
+| **Formulation** | Discriminative: $P(\text{click} \mid \text{user}, \text{item})$ | Generative: $P(\text{next\_item} \mid \text{history})$ |
+| **Features** | Thousands of hand-engineered features | Raw user action sequences |
+| **Architecture** | Embedding tables + feature interaction (DCN, DeepFM) | Transformer variants (HSTU, OneTrans) |
+| **Pipeline** | Cascaded (retrieval → ranking → re-ranking) | Unified (or fewer stages) |
+| **Scaling** | Plateaus at moderate compute | LLM-like scaling laws |
+| **Inference** | Independent scoring per candidate | KV-cached sequence processing |
+| **Model size** | ~Billions (mostly embedding tables) | Up to 1.5 trillion parameters |
 
 ## The LLM Wave
 
-As of early 2026, the recommendation systems community is in the middle of a rapid and sometimes messy integration of large language models. The hype is considerable, but so are the genuine results. The key question is not *whether* LLMs will impact recommendation systems — they already have — but *where in the pipeline* they add the most value.
-
-Several distinct paradigms have emerged.
+The generative recommendation architectures described above — HSTU, Wukong, OneTrans — are Transformer-based but trained from scratch on behavioral data. A parallel and equally important development is the integration of **pre-trained large language models** into recommendation systems, bringing world knowledge, natural language understanding, and zero-shot reasoning capabilities that behavioral models cannot match.
 
 ### LLMs as Feature Extractors and Metadata Generators
 
@@ -479,13 +543,23 @@ The most immediately practical use of LLMs in recommendation systems is not glam
 
 This pattern — use a large model to generate enriched metadata or pseudo-labels, then train a smaller, specialized model on those outputs — turns out to be remarkably effective. It sidesteps the latency and cost problems of serving LLMs directly while still capturing their language understanding capabilities.
 
-### LLMs for Data Augmentation
+### HLLM: Hierarchical LLMs for Recommendation
 
-A closely related pattern uses LLMs to **augment training data**. Items with sparse descriptions get enriched. Missing metadata gets filled in. Synthetic user reviews or item descriptions get generated to address cold-start scenarios. This is particularly valuable in domains like e-commerce, where new products arrive constantly with minimal descriptions, and in cross-lingual settings where content in low-resource languages needs enrichment.
+ByteDance's **HLLM** (Chen et al., 2024) pushes the LLM-as-feature-extractor pattern further with a hierarchical architecture using **two separate LLMs**: an **Item LLM** that compresses an item's text description into a dense embedding, and a **User LLM** that processes the sequence of Item LLM embeddings to model the user's preference trajectory. By decoupling item understanding from user modeling, each LLM specializes at its task. HLLM demonstrates that pre-trained LLM world knowledge (from text) can complement or replace traditional ID-based embeddings, particularly for cold-start items.
+
+### PLUM: Generative Retrieval at YouTube Scale
+
+Google's **PLUM** (2025) represents perhaps the most ambitious attempt to use pre-trained LLMs for recommendation at scale. PLUM adapts a **Gemini-family** LLM for generative retrieval through three stages:
+
+1. **Semantic ID Tokenization**: A Residual-Quantized Variational AutoEncoder (RQ-VAE) converts each item into a sequence of discrete tokens — turning the item corpus into a "language" the LLM can understand
+2. **Continued Pre-training**: Fine-tunes the Gemini model on domain-specific data to align world knowledge with Semantic IDs and user behavior patterns
+3. **Generative Retrieval**: The model autoregressively generates the token IDs of next items a user will engage with
+
+The production results at YouTube are compelling: +4.96% Panel CTR lift for YouTube Shorts, 2.6x larger unique video coverage for Long-Form Video, and 13.24x larger coverage for Shorts. PLUM is the first major demonstration that pre-trained LLMs can be effectively adapted for industrial-scale generative retrieval.
 
 ### Unified LLM-Based Rankers
 
-The more ambitious application is using LLMs as the ranking model itself. **LinkedIn's 360Brew** is perhaps the most striking example: they replaced over 30 separate ranking tasks (feed ranking, job recommendations, ad ranking, notifications) with a single 150-billion-parameter Mixtral-based model. The model takes in a textual representation of the user context and candidate items and produces relevance scores. This dramatically simplified their ML infrastructure and, they report, improved performance across the board.
+The more ambitious application is using LLMs as the ranking model itself. **LinkedIn's 360Brew** is perhaps the most striking example: they replaced over 30 separate ranking tasks (feed ranking, job recommendations, ad ranking, notifications) with a single 150-billion-parameter Mixtral-based model. This dramatically simplified their ML infrastructure and improved performance across the board.
 
 **Netflix's UniCoRn** (Unified Contextual Recommendation) similarly unified search and recommendation into a single model, eliminating the artificial boundary between "the user typed a query" and "the user is browsing."
 
@@ -493,19 +567,16 @@ The more ambitious application is using LLMs as the ranking model itself. **Link
 
 LLMs also open up an entirely new interaction paradigm: **conversational recommendation**, where users describe what they want in natural language rather than relying on implicit behavioral signals. "I'm in the mood for something like Fleabag but darker" is a query that traditional recommender systems cannot handle but that an LLM-augmented system can reason about.
 
-### The Reality Check
+### Where Things Stand
 
-But here is where I think intellectual honesty demands some tempering of the enthusiasm. LLMs are **too slow and too expensive** for candidate generation over billions of items. You cannot run a 70-billion-parameter model for every user-item pair in a catalog of a billion items. The two-tower plus ANN search paradigm remains unchallenged for first-stage retrieval.
+The picture that emerges in early 2026 is more nuanced than either "LLMs will replace everything" or "LLMs are just hype for recommendations." The evidence suggests a clear segmentation by pipeline stage:
 
-**Spotify's** experiments with generative retrieval — using LLMs to directly generate item identifiers rather than score a candidate set — have shown promise but still underperform specialized behavioral baselines for users with established listening histories. The LLM shines for cold-start and exploratory queries but lags behind simpler models that directly learn from behavioral signals.
+- **Retrieval**: PLUM shows pre-trained LLMs can work, but purpose-built behavioral models (HSTU, two-tower + ANN) remain dominant for latency-critical serving at billion-item scale
+- **Ranking**: Wukong, HSTU, and OneTrans — Transformer architectures trained from scratch on behavioral data — are winning here, with LLM-based rankers (360Brew) viable for platforms that can afford the compute
+- **Feature enrichment and cold-start**: This is where pre-trained LLMs add the most unambiguous value, through HLLM-style hierarchical encoding or metadata generation
+- **End-to-end**: OneRec provides the first production evidence that a single generative model can outperform cascaded pipelines, but this remains early-stage
 
-In February 2026, **Meta** announced plans to embed LLMs directly into the recommendation systems powering Facebook, Instagram, and Threads. Zuckerberg described current recommendation systems as "primitive," which is provocative coming from a company whose existing systems serve billions of users. My intuition is that Meta's bet will pay off for the ranking and re-ranking stages but that the retrieval stage will remain dominated by embedding-based approaches for the foreseeable future.
-
-The emerging consensus among practitioners — articulated clearly by Eugene Yan and others — is nuanced:
-
-> The current evidence strongly suggests that LLMs are best positioned as enhancers of traditional recommendation pipelines — excelling at metadata generation, cold-start scenarios, and unifying multiple ranking tasks — rather than as end-to-end replacements.
-
-I suspect this will remain true for at least the next few years. The industrial pipeline architecture is not going away; it is getting new, more powerful components at each stage.
+> The industrial recommendation landscape of 2026 is defined by a convergence: purpose-built generative architectures (HSTU, Wukong, OneTrans) that exhibit LLM-like scaling laws, and pre-trained LLMs (PLUM, HLLM, 360Brew) that bring world knowledge to the pipeline. The most sophisticated systems combine both.
 
 With all these modeling advances, a natural question arises: how do we know if any of this is actually working? That brings us to evaluation — a topic with more depth and subtlety than most practitioners appreciate.
 
@@ -623,6 +694,15 @@ The recommendation systems field sits at a fascinating intersection: it is one o
 - [Wang, X., He, X., Wang, M., Feng, F., & Chua, T.-S., "Neural Graph Collaborative Filtering," *SIGIR*, 2019](https://arxiv.org/abs/1905.08108)
 - [He, X., Deng, K., Wang, X., Li, Y., Zhang, Y., & Wang, M., "LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation," *SIGIR*, 2020](https://arxiv.org/abs/2002.02126)
 - [Rendle, S., Krichene, W., Zhang, L., & Anderson, J., "Neural Collaborative Filtering vs. Matrix Factorization Revisited," *RecSys*, 2020](https://arxiv.org/abs/2005.09683)
+- [Zhang, B., et al., "Wukong: Towards a Scaling Law for Large-Scale Recommendation," *ICML*, 2024](https://arxiv.org/abs/2403.02545)
+- [Zhai, J., et al., "Actions Speak Louder than Words: Trillion-Parameter Sequential Transducers for Generative Recommendations," *ICML*, 2024](https://arxiv.org/abs/2402.17152)
+- [Chen, J., Chi, L., Peng, B., & Yuan, Z., "HLLM: Enhancing Sequential Recommendations via Hierarchical Large Language Models," *ByteDance*, 2024](https://arxiv.org/abs/2409.12740)
+- [Meta Engineering, "Sequence Learning: A Paradigm Shift for Personalized Ads Recommendations," *Meta Engineering Blog*, 2024](https://engineering.fb.com/2024/11/19/data-infrastructure/sequence-learning-personalized-ads-recommendations/)
+- [Meta Engineering, "Meta Andromeda: Supercharging Advantage+ Automation," *Meta Engineering Blog*, 2024](https://engineering.fb.com/2024/12/02/production-engineering/meta-andromeda-advantage-automation-next-gen-personalized-ads-retrieval-engine/)
+- [Wang, S., et al., "OneRec: Unifying Retrieve and Rank with Generative Recommender," *Kuaishou*, 2025](https://arxiv.org/abs/2502.18965)
+- [Zhang, Z., et al., "OneTrans: Unified Feature Interaction and Sequence Modeling with One Transformer," *ByteDance*, 2025](https://arxiv.org/abs/2510.26104)
+- [Meta Engineering, "Meta's Generative Ads Model (GEM)," *Meta Engineering Blog*, 2025](https://engineering.fb.com/2025/11/10/ml-applications/metas-generative-ads-model-gem-the-central-brain-accelerating-ads-recommendation-ai-innovation/)
+- [He, et al., "PLUM: Adapting Pre-trained Language Models for Industrial-scale Generative Recommendations," *Google/YouTube*, 2025](https://arxiv.org/abs/2510.07784)
 - [Yan, E., "How LLMs Are (and Aren't) Changing RecSys," *eugeneyan.com*, 2025](https://eugeneyan.com/writing/llm-patterns/)
 - [LinkedIn Engineering, "360Brew: LinkedIn's Unified Generative Ranking Model," *LinkedIn Engineering Blog*, 2025](https://www.linkedin.com/blog/engineering/)
 - [Netflix, "UniCoRn: Unified Contextual Recommendation," *Netflix Tech Blog*, 2025](https://netflixtechblog.com/)
