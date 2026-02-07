@@ -101,6 +101,13 @@
     border-color: var(--border-color);
   }
 
+  /* Code blocks in dark mode */
+  pre, code {
+    background-color: var(--code-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary);
+  }
+
   /* Syntax highlighting in dark mode */
   .highlight {
     background: var(--highlight-bg) !important;
@@ -110,6 +117,51 @@
   pre.highlight {
     background: var(--highlight-bg) !important;
     color: var(--highlight-text);
+  }
+
+  .highlight pre code {
+    background: transparent !important;
+  }
+
+  /* Tables in dark mode */
+  table {
+    color: var(--text-primary);
+    border-color: var(--border-color);
+  }
+
+  table tr:nth-child(even) {
+    background-color: var(--bg-secondary);
+  }
+
+  table th {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+  }
+
+  table td {
+    border-color: var(--border-color);
+  }
+
+  /* Blockquote in dark mode */
+  blockquote {
+    color: var(--text-secondary);
+    border-left-color: var(--accent);
+  }
+
+  /* Mobile nav in dark mode */
+  .site-nav {
+    background-color: var(--bg-primary);
+    border-color: var(--border-color);
+  }
+
+  /* Footer wrapper */
+  .footer-col-wrapper {
+    color: var(--text-secondary);
+  }
+
+  /* SVG icons */
+  .svg-icon {
+    fill: var(--text-secondary);
   }
 
   /* MathJax dark mode */
