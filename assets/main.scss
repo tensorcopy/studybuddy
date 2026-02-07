@@ -21,23 +21,22 @@
   --highlight-text: #f8f8f2;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: #1a1a2e;
-    --bg-secondary: #16213e;
-    --bg-code: #0f3460;
-    --text-primary: #e0e0e0;
-    --text-secondary: #a0a0a0;
-    --text-meta: #8a8a8a;
-    --text-link: #c0c0c0;
-    --border-color: #2a2a4a;
-    --border-table: #2a2a4a;
-    --accent: #5dade2;
-    --blockquote-bg: #16213e;
-    --code-bg: #0f3460;
-    --highlight-bg: #1a1a2e;
-    --highlight-text: #e0e0e0;
-  }
+/* ===== Dark theme ===== */
+html[data-theme="dark"] {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-code: #0f3460;
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a0a0;
+  --text-meta: #8a8a8a;
+  --text-link: #c0c0c0;
+  --border-color: #2a2a4a;
+  --border-table: #2a2a4a;
+  --accent: #5dade2;
+  --blockquote-bg: #16213e;
+  --code-bg: #0f3460;
+  --highlight-bg: #1a1a2e;
+  --highlight-text: #e0e0e0;
 
   /* Override minima's hardcoded colors */
   body {
@@ -53,6 +52,11 @@
 
   .site-title, .site-title:visited {
     color: var(--text-primary) !important;
+  }
+
+  .site-nav {
+    background-color: var(--bg-primary);
+    border-color: var(--border-color);
   }
 
   .site-nav .page-link {
@@ -93,6 +97,10 @@
     color: var(--text-secondary);
   }
 
+  .footer-col-wrapper {
+    color: var(--text-secondary);
+  }
+
   .footer-col {
     color: var(--text-secondary);
   }
@@ -101,14 +109,13 @@
     border-color: var(--border-color);
   }
 
-  /* Code blocks in dark mode */
+  /* Code blocks */
   pre, code {
     background-color: var(--code-bg) !important;
     border-color: var(--border-color) !important;
     color: var(--text-primary);
   }
 
-  /* Syntax highlighting in dark mode */
   .highlight {
     background: var(--highlight-bg) !important;
   }
@@ -123,7 +130,7 @@
     background: transparent !important;
   }
 
-  /* Tables in dark mode */
+  /* Tables */
   table {
     color: var(--text-primary);
     border-color: var(--border-color);
@@ -142,21 +149,10 @@
     border-color: var(--border-color);
   }
 
-  /* Blockquote in dark mode */
+  /* Blockquote */
   blockquote {
     color: var(--text-secondary);
     border-left-color: var(--accent);
-  }
-
-  /* Mobile nav in dark mode */
-  .site-nav {
-    background-color: var(--bg-primary);
-    border-color: var(--border-color);
-  }
-
-  /* Footer wrapper */
-  .footer-col-wrapper {
-    color: var(--text-secondary);
   }
 
   /* SVG icons */
@@ -164,11 +160,38 @@
     fill: var(--text-secondary);
   }
 
-  /* MathJax dark mode */
+  /* MathJax */
   .MathJax, .MathJax_Display {
     color: var(--text-primary) !important;
   }
 }
+
+/* ===== Theme toggle button ===== */
+.theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--text-primary, #111);
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-left: 12px;
+  line-height: 1;
+}
+
+.theme-toggle:hover {
+  color: var(--accent, #4a9eff);
+}
+
+/* Show sun in dark mode, moon in light mode */
+html[data-theme="dark"] .icon-moon { display: none; }
+html[data-theme="dark"] .icon-sun { display: inline-block; }
+html[data-theme="light"] .icon-sun { display: none; }
+html[data-theme="light"] .icon-moon { display: inline-block; }
+/* Default before JS runs */
+.icon-sun { display: none; }
+.icon-moon { display: inline-block; }
 
 /* ===== Layout ===== */
 
