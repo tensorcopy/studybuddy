@@ -36,7 +36,6 @@ defaults:
       type: "posts"
     values:
       layout: "post"
-      mathjax: true
       toc: true
 
 # Exclude from build
